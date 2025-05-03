@@ -1,12 +1,12 @@
 // Firebase configuration
 const firebaseConfig = {
-    apiKey: process.env.FIREBASE_API_KEY,
-    authDomain: process.env.FIREBASE_AUTH_DOMAIN,
-    projectId: process.env.FIREBASE_PROJECT_ID,
-    storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
-    messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID,
-    appId: process.env.FIREBASE_APP_ID,
-    measurementId: process.env.FIREBASE_MEASUREMENT_ID
+    apiKey: "AIzaSyAFdtlbEK5-SHtSDP_yCHwzIwYHR8Bns4c",
+    authDomain: "bkp3-ai.firebaseapp.com",
+    projectId: "bkp3-ai",
+    storageBucket: "bkp3-ai.appspot.com",
+    messagingSenderId: "34824408221",
+    appId: "1:34824408221:web:ba6e55cf52afa7b557d874",
+    measurementId: "G-RP3GTBZP3Y"
 };
 
 // Initialize Firebase
