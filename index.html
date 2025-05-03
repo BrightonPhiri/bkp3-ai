@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BKP3 AI Assistant</title>
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="firebase-config.js"></script>
+    <!-- Text Formatter -->
+    <link rel="stylesheet" href="textFormatter.css">
+    <script src="textFormatter.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Auth Modal -->
+    <div class="modal fade" id="authModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="authModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="authModalLabel">Sign In</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" id="closeAuthModal"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="auth-error" class="alert alert-danger" style="display: none;"></div>
+                    <div id="auth-success" class="alert alert-success" style="display: none;"></div>
+                    
+                    <div class="auth-container" id="login-form">
+                        <form id="signin-form">
+                            <div class="mb-3">
+                                <label for="email" class="form-label text-secondary">Email address</label>
+                                <input type="email" class="form-control" id="email" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="password" class="form-label text-secondary">Password</label>
+                                <input type="password" class="form-control" id="password" required>
+                            </div>
+                            <div class="d-grid gap-2">
+                                <button type="submit" class="btn btn-primary" id="signin-btn">Sign In</button>
+                            </div>
+                        </form>
+                        
+                        <div class="auth-divider my-3">
+                            <span>OR</span>
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            <button type="button" class="btn btn-outline-secondary" id="google-signin-btn">
+                                <img src="assets/img/google-icon.png" alt="Google" class="google-icon"> Sign in with Google
+                            </button>
+                        </div>
+                        
+                        <div class="text-center mt-3">
+                            <p class="text-secondary">Don't have an account? <a href="#" id="show-signup">Create Account</a></p>
+                        </div>
+                    </div>
+                    
+                    <div class="auth-container" id="signup-form" style="display: none;">
+                        <form id="register-form">
+                            <div class="mb-3">
+                                <label for="reg-email" class="form-label text-secondary">Email address</label>
+                                <input type="email" class="form-control" id="reg-email" required>
+                                <div class="form-text">We'll send a verification email to this address</div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="reg-password" class="form-label text-secondary">Password</label>
+                                <input type="password" class="form-control" id="reg-password" required>
+                                <div class="form-text">Password must be at least 6 characters</div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="confirm-password" class="form-label text-secondary">Confirm Password</label>
+                                <input type="password" class="form-control" id="confirm-password" required>
+                            </div>
+                            <div class="d-grid gap-2">
+                                <button type="submit" class="btn btn-primary" id="register-btn">Sign Up</button>
+                            </div>
+                        </form>
+                        
+                        <div class="auth-divider my-3">
+                            <span>OR</span>
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            <button type="button" class="btn btn-outline-secondary" id="google-signup-btn">
+                                <img src="assets/img/google-icon.png" alt="Google" class="google-icon"> Sign up with Google
+                            </button>
+                        </div>
+                        
+                        <div class="text-center mt-3">
+                            <p class="text-secondary">Already have an account? <a href="#" id="show-signin">Sign In</a></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="app-container" id="app-container" style="display: none;">
+        <!-- Sidebar -->
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="new-chat-btn" id="new-chat-btn">
+                    <i class="fas fa-plus"></i> New Chat
+                </div>
+                <button class="sidebar-toggle d-md-none" id="sidebar-toggle">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
+        
+            
+            <div class="history-container" id="chat-history-list">
+                <!-- Chat history will be populated here -->
+                <div class="sidebar-section-title">Previous Chats</div>
+                <div id="no-history-message" class="text-center p-3 text-muted" style="display: none;">
+                    <i class="far fa-folder-open mb-2"></i>
+                    <p>No chat history yet</p>
+                </div>
+                <div id="chat-history-items">
+                    <!-- Chat history items will be dynamically populated -->
+                </div>
+            </div>
+            
+            <div class="sidebar-footer">
+                <a href="#" class="user-section" id="profile-link">
+                    <div class="user-avatar">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <div class="user-info">
+                        <div class="user-name" id="user-display-name">User</div>
+                        <div class="user-email" id="user-email">user@example.com</div>
+                    </div>
+                </a>
+                <div class="footer-divider"></div>
+                <div class="app-info">
+                    <div class="app-version">BKP3 AI v1.0</div>
+                    <div class="user-actions">
+                        <button class="action-btn settings-btn" id="settings-icon" title="Settings">
+                            <i class="fas fa-cog"></i>
+                        </button>
+                        <button class="action-btn logout-btn" id="logout-button" title="Logout">
+                            <i class="fas fa-sign-out-alt"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Main Content Area -->
+        <div class="main-content" id="main-content">
+            <!-- Navbar -->
+            <div class="navbar-container">
+                <div class="navbar-title-section">
+                    <h1 id="current-chat-title">BKP3 AI Assistant</h1>
+                    <button class="sidebar-toggle d-md-none" id="mobile-sidebar-toggle">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                </div>
+                <div class="navbar-actions">
+                    <div class="model-selector">
+                        <select class="form-select" id="ai-service">
+                            <option value="text">Text AI</option>
+                            <option value="audio">Text-to-Audio</option>
+                            <option value="image">Image Gen</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Local Mode Warning -->
+            <div class="local-mode-warning" id="local-mode-warning">
+                <i class="fas fa-exclamation-triangle"></i> You're running in local demo mode. API calls won't work without a server due to CORS restrictions. Simulated responses will be shown instead.
+            </div>
+            
+            <!-- Chat Area -->
+            <div class="chat-container">
+                <div class="chat-body" id="chat-body">
+                    <div class="welcome-screen" id="welcome-screen">
+                        <div class="welcome-logo">
+                            <i class="fas fa-rocket"></i>
+                        </div>
+                        <h2>Welcome to BKP3 AI</h2>
+                        <p>Ask anything and get intelligent responses</p>
+                        <div class="suggestion-grid">
+                            <div class="suggestion-item" data-service="text">
+                                <h4><i class="fas fa-comment-alt"></i> Text AI</h4>
+                                <p>"Tell me about the latest advancements in AI"</p>
+                                <span class="service-description">Ask questions, get information, or have a conversation</span>
+                            </div>
+                            <div class="suggestion-item" data-service="audio">
+                                <h4><i class="fas fa-headphones"></i> Text-to-Audio</h4>
+                                <p>"Convert this text to natural speech"</p>
+                                <span class="service-description">Generate realistic audio from your text input</span>
+                            </div>
+                            <div class="suggestion-item" data-service="image">
+                                <h4><i class="fas fa-image"></i> Image Generation</h4>
+                                <p>"Create an image of a futuristic city"</p>
+                                <span class="service-description">Generate custom images from text descriptions</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="ai-message first-message">
+                        <h1>Hello! I'm your AI assistant</h1>
+                        <p>I can help you with a variety of tasks and provide information on many topics. Here are some examples of what I can do:</p>
+                        
+                        <h2>Code Examples</h2>
+                        <p>I can provide code snippets in various languages:</p>
+                        
+                        <h3>Python File Cleaner</h3>
+                        <p>Here's a Python script that deletes files under 5KB:</p>
+                        
+```python
+import os
+from pathlib import Path
+
+def delete_small_files(directory, size_limit_kb=5, recursive=False):
+    """Deletes all files smaller than size_limit_kb kilobytes in the given directory.
+    :param directory: Path to the directory to scan.
+    :param size_limit_kb: Size limit in kilobytes. Files smaller than this will be deleted.
+    :param recursive: If True, scan subdirectories recursively.
+    """
+    size_limit_bytes = size_limit_kb * 1024
+    
+    # Walk through directory tree if recursive
+    if recursive:
+        for root, dirs, files in os.walk(directory):
+            for filename in files:
+                filepath = os.path.join(root, filename)
+                try:
+                    if os.path.getsize(filepath) < size_limit_bytes:
+                        print(f"Deleting {filepath} ({os.path.getsize(filepath)} bytes)")
+                        os.remove(filepath)
+                except Exception as e:
+                    print(f"Error deleting {filepath}: {e}")
+    else:
+        # Only scan the specified directory
+        for filename in os.listdir(directory):
+            filepath = os.path.join(directory, filename)
+            if os.path.isfile(filepath):
+                try:
+                    if os.path.getsize(filepath) < size_limit_bytes:
+                        print(f"Deleting {filepath} ({os.path.getsize(filepath)} bytes)")
+                        os.remove(filepath)
+                except Exception as e:
+                    print(f"Error deleting {filepath}: {e}")
+                    
+if __name__ == "__main__":
+    directory_to_clean = input("Enter the directory path to clean: ").strip()
+    recursive_choice = input("Delete files in subdirectories as well? (y/n): ")
+    recursive = recursive_choice.lower() == "y"
+    
+    delete_small_files(directory_to_clean, 5, recursive=recursive)
+```
+
+                        <h3>JavaScript Counter</h3>
+                        <p>A simple React counter component:</p>
+                        
+```javascript
+import React, { useState } from 'react';
+
+function Counter() {
+    // State to store the count value
+    const [count, setCount] = useState(0);
+    
+    // Function to increment the counter
+    const increment = () => {
+        setCount(count + 1);
+    };
+    
+    // Function to decrement the counter
+    const decrement = () => {
+        setCount(count - 1);
+    };
+    
+    return (
+        <div className="counter">
+            <h2>Counter: {count}</h2>
+            <button onClick={decrement}>-</button>
+            <button onClick={increment}>+</button>
+        </div>
+    );
+}
+
+export default Counter;
+```
+
+                        <h3>CSS Styles</h3>
+                        <p>Styling for the counter component:</p>
+                        
+```css
+.counter {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin: 2rem;
+    padding: 1rem;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    background-color: #f9f9f9;
+}
+
+.counter h2 {
+    color: #333;
+    margin-bottom: 1rem;
+}
+
+.counter button {
+    margin: 0 0.5rem;
+    padding: 0.5rem 1rem;
+    font-size: 1.2rem;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.counter button:hover {
+    background-color: #45a049;
+}
+```
+
+                        <h2>Lists</h2>
+                        <p>I can create ordered and unordered lists:</p>
+                        
+                        <h3>Steps to Run the Code</h3>
+                        <ol>
+                            <li>Save the code to a file</li>
+                            <li>Install any required dependencies</li>
+                            <li>Run the file with the appropriate interpreter</li>
+                            <li>Follow the prompts in the terminal</li>
+                        </ol>
+                        
+                        <h3>Key Features</h3>
+                        <ul>
+                            <li>Scans directories for small files</li>
+                            <li>Can work recursively through subdirectories</li>
+                            <li>Provides feedback on deleted files</li>
+                            <li>Has error handling for problematic files</li>
+                        </ul>
+                        
+                        <h2>Tables</h2>
+                        <p>I can format tabular data:</p>
+                        
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Language</th>
+                                    <th>File Extension</th>
+                                    <th>Primary Use</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Python</td>
+                                    <td>.py</td>
+                                    <td>General purpose, Data Science</td>
+                                </tr>
+                                <tr>
+                                    <td>JavaScript</td>
+                                    <td>.js</td>
+                                    <td>Web Development, Node.js</td>
+                                </tr>
+                                <tr>
+                                    <td>CSS</td>
+                                    <td>.css</td>
+                                    <td>Web Styling</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        
+                        <h2>Quotes</h2>
+                        <blockquote>
+                            "Programming is the art of telling another human what one wants the computer to do."
+                            <br>— Donald Knuth
+                        </blockquote>
+                        
+                        <hr>
+                        
+                        <p>How can I help you today? Feel free to ask me questions, request code examples, or get assistance with any topic!</p>
+                    </div>
+                </div>
+                
+                <!-- Message Input -->
+                <div class="message-input-area">
+                    <form id="message-form">
+                        <div class="input-group message-input-container">
+                            <div class="textarea-container">
+                                <textarea id="user-input" class="form-control message-textarea" placeholder="Type your message here..." rows="1"></textarea>
+                            </div>
+                            <button class="btn message-send-btn" type="submit">
+                                <i class="fas fa-paper-plane"></i>
+                            </button>
+                        </div>
+                    </form>
+                    <div id="status-message" class="status-message"></div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Settings Panel -->
+        <div class="settings-panel" id="settings-panel">
+            <div class="settings-header">
+                <h3><i class="fas fa-cog"></i> Settings</h3>
+                <button class="close-settings" id="close-settings">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="settings-body">
+                <!-- Settings tabs for different service types -->
+                <div class="settings-tabs">
+                    <div class="settings-tab active" data-tab="text-settings">Text Settings</div>
+                    <div class="settings-tab" data-tab="voice-settings">Voice Settings</div>
+                    <div class="settings-tab" data-tab="image-settings">Image Settings</div>
+                </div>
+                
+                <!-- Text settings content -->
+                <div class="settings-tab-content active" id="text-settings">
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <label for="model-select" class="form-label">Model</label>
+                            <select class="form-select" id="model-select">
+                                <option value="openai">OpenAI</option>
+                                <option value="llama">Llama</option>
+                                <option value="mistral">Mistral</option>
+                                <option value="searchgpt">SearchGPT</option>
+                                <option value="gemini">Gemini</option>
+                                <option value="hormoz">Hormoz</option>
+                                <option value="deepseek">DeepSeek</option>
+                                <option value="qwen-reasoning">Qwen Reasoning</option>
+                            </select>
+                            <div id="model-description" class="form-text text-muted mt-1"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-check form-switch mb-3">
+                        <input class="form-check-input" type="checkbox" id="customize-system">
+                        <label class="form-check-label" for="customize-system">Customize system prompt</label>
+                    </div>
+                    <textarea id="system-prompt" class="form-control" rows="2" style="display: none;">You are a helpful assistant.</textarea>
+                </div>
+                
+                <!-- Voice settings content -->
+                <div class="settings-tab-content" id="voice-settings">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="voice-select" class="form-label">Voice</label>
+                            <select class="form-select" id="voice-select">
+                                <option value="alloy">Alloy (Balanced)</option>
+                                <option value="echo">Echo (Warm)</option>
+                                <option value="fable">Fable (Expressive)</option>
+                                <option value="onyx">Onyx (Deep)</option>
+                                <option value="nova">Nova (Friendly)</option>
+                                <option value="shimmer">Shimmer (Bright)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="vibe-select" class="form-label">Vibe</label>
+                            <select class="form-select" id="vibe-select">
+                                <option value="default">Default</option>
+                                <option value="enthusiastic">Enthusiastic</option>
+                                <option value="friendly">Friendly</option>
+                                <option value="sad">Sad</option>
+                                <option value="serious">Serious</option>
+                                <option value="excited">Excited</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Image settings content -->
+                <div class="settings-tab-content" id="image-settings">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="image-model" class="form-label">Model</label>
+                            <select class="form-select" id="image-model">
+                                <option value="flux">Flux (Default)</option>
+                                <option value="stable-diffusion">Stable Diffusion</option>
+                                <option value="dalle">DALL-E</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="seed-input" class="form-label">Seed (optional)</label>
+                            <input type="number" class="form-control" id="seed-input" placeholder="Random">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="width-input" class="form-label">Width</label>
+                            <select class="form-select" id="width-input">
+                                <option value="512">512</option>
+                                <option value="768">768</option>
+                                <option value="1024" selected>1024</option>
+                                <option value="1280">1280</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="height-input" class="form-label">Height</label>
+                            <select class="form-select" id="height-input">
+                                <option value="512">512</option>
+                                <option value="768">768</option>
+                                <option value="1024" selected>1024</option>
+                                <option value="1280">1280</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="image-count" class="form-label"># of Images</label>
+                            <select class="form-select" id="image-count">
+                                <option value="1">1</option>
+                                <option value="2">2</option>
+                                <option value="4">4</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Login Screen -->
+    <div class="login-screen" id="login-screen">
+        <div class="login-container">
+            <div class="login-logo">
+                <i class="fas fa-rocket"></i>
+            </div>
+            <h1>BKP3 AI Assistant</h1>
+            <p>Sign in to access the AI assistant</p>
+            <div class="d-grid gap-2 mt-4">
+                <button class="btn btn-primary login-button" id="show-auth-modal">
+                    <i class="fas fa-sign-in-alt me-2"></i> Sign In / Sign Up
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Image Viewer Modal -->
+    <div class="modal fade" id="imageModal" tabindex="-1" aria-labelledby="imageModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header py-2">
+                    <h5 class="modal-title" id="imageModalLabel">
+                        Generated Image
+                    </h5>
+                    <div class="d-flex align-items-center">
+                        <span class="text-muted small me-3" id="modalImageCaption"></span>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                </div>
+                <div class="modal-body p-0 position-relative">
+                    <img src="" class="img-fluid w-100" id="modalImage" alt="Generated image">
+                    
+                    <!-- Navigation controls overlay -->
+                    <div class="modal-controls">
+                        <!-- Navigation buttons -->
+                        <div class="nav-buttons">
+                            <button type="button" class="btn btn-nav" id="prevImageBtn" title="Previous Image">
+                                <i class="fas fa-chevron-up"></i>
+                            </button>
+                            <button type="button" class="btn btn-nav" id="nextImageBtn" title="Next Image">
+                                <i class="fas fa-chevron-down"></i>
+                            </button>
+                        </div>
+                        
+                        <!-- Download button -->
+                        <button type="button" class="btn btn-download" id="downloadImageBtn" title="Download Image">
+                            <i class="fas fa-download"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Backdrop for mobile sidebar-->
+    <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
+
+    <!-- Logout Confirmation Modal -->
+    <div class="modal fade" id="logoutConfirmModal" tabindex="-1" aria-labelledby="logoutConfirmModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="logoutConfirmModalLabel">Confirm Logout</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body text-center">
+                    <div class="logout-icon mb-3">
+                        <i class="fas fa-sign-out-alt"></i>
+                    </div>
+                    <h4 class="mb-3 text-secondary">Are you sure you want to logout?</h4>
+                    <p class="text-secondary">You will need to sign in again to access your account.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-danger" id="confirm-logout-btn">Yes, Logout</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+
+    <!-- Add Bootstrap JS for modal functionality -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html> 
