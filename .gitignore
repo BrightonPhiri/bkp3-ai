@@ -28,4 +28,4 @@ yarn.lock
 Thumbs.db 
 
 node_modules/
-firebase-config.js
+#firebase-config.js
